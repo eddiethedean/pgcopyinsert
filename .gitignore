@@ -1,0 +1,14 @@
+egg-info/
+dist/
+build/
+.vscode/
+.ipynb_checkpoints/
+tests/.mypy_cache/
+tests/__pycache__/
+.DS_Store
+.coverage
+.mypy_cache/
+data/
+.venv/
+.pytest_cache/
+__pycache__/
