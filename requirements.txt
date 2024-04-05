@@ -1,4 +1,7 @@
-sqlalchemy
+sqlalchemy[asyncio]
 psycopg2[binary]
 pandas
 polars
+asyncpg
+aiofiles
+aiocsv
