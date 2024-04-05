@@ -1,5 +1,5 @@
 sqlalchemy[asyncio]
-psycopg2[binary]
+psycopg2-binary
 pandas
 polars
 asyncpg
