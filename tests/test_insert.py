@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Generator, Sequence
 import pytest
 from unittest.mock import MagicMock, Mock, patch
 
@@ -16,6 +16,7 @@ from pgcopyinsert.insert import (
 def mock_table1() -> MagicMock:
     return MagicMock(spec=sa.Table)
 
+
 @pytest.fixture
 def mock_table2() -> MagicMock:
     return MagicMock(spec=sa.Table)
@@ -32,7 +33,7 @@ def test_insert_from_table_stmt_ocdn(mock_table1, mock_table2):
     mock_insert = MagicMock(spec=Insert)
     mock_insert.on_conflict_do_nothing.return_value = Mock(spec=Insert)
     with patch('pgcopyinsert.insert.insert_from_table_stmt', return_value=mock_insert) as mock_insert_from_table_stmt:
-        result = insert_from_table_stmt_ocdn(mock_table1, mock_table2)
+        result: Insert = insert_from_table_stmt_ocdn(mock_table1, mock_table2)
 
         assert result == mock_insert.on_conflict_do_nothing.return_value
         mock_insert_from_table_stmt.assert_called_once_with(mock_table1, mock_table2)
