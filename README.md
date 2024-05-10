@@ -39,9 +39,9 @@ pip install pgcopyinsert[asyncpg, polars]
 - [sqlalchemy](https://pypi.org/project/SQLAlchemy/)
 
 ## Optional Dependencies
-- [psycopg] (https://www.psycopg.org/psycopg3/)
+- [psycopg](https://www.psycopg.org/psycopg3/)
 - [psycopg2](https://www.psycopg.org/docs/)
-- [asyncpg] (https://magicstack.github.io/asyncpg/current/)
+- [asyncpg](https://magicstack.github.io/asyncpg/current/)
 - [polars](https://pola.rs)
 - [pandas](https://pandas.pydata.org/)
 
