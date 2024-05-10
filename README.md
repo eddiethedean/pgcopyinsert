@@ -14,16 +14,6 @@ Here are just a few of the things that pgcopyinsert does:
   - 3X faster inserts for Pandas DataFrames
   - Polars DataFrame upserts
 
-
-## Where to get it
-The source code is currently hosted on GitHub at:
-https://github.com/eddiethedean/pgcopyinsert
-
-```sh
-# PyPI
-pip install pgcopyinsert
-```
-
 ## Dependencies
 - [psycopg2](https://www.psycopg.org/docs/)
 - [sqlalchemy](https://pypi.org/project/SQLAlchemy/1.3.18/)
