@@ -10,13 +10,38 @@ Here are just a few of the things that pgcopyinsert does:
   - Copy CSV directly to database table
   - Create temp table based of database table columns (names and types, no constraints)
   - Copy CSV to temp table then insert records from temp table to target table
+  - Synchronous and Asynchronous copy and copyinsert functions
   - "ON CONFLICT DO NOTHING" and "ON CONFLICT DO UPDATE" insert options
   - 3X faster inserts for Pandas DataFrames
   - Polars DataFrame upserts
+  - Works with psycopg and psycopg2 synchronously
+  - Works with psycopg and asyncpg asychronously
+
+## Where to get it
+The source code is currently hosted on GitHub at:
+https://github.com/eddiethedean/pgcopyinsert
+
+```sh
+# PyPI
+pip install pgcopyinsert
+
+# install with a PostgreSQL driver
+pip install pgcopyinsert[psycopg]
+pip install pgcopyinsert[psycopg2]
+pip install pgcopyinsert[asyncpg]
+
+# install with a PostgreSQL driver and pandas/polars
+pip install pgcopyinsert[psycopg, pandas]
+pip install pgcopyinsert[asyncpg, polars]
+```
 
 ## Dependencies
+- [sqlalchemy](https://pypi.org/project/SQLAlchemy/)
+
+## Optional Dependencies
+- [psycopg] (https://www.psycopg.org/psycopg3/)
 - [psycopg2](https://www.psycopg.org/docs/)
-- [sqlalchemy](https://pypi.org/project/SQLAlchemy/1.3.18/)
+- [asyncpg] (https://magicstack.github.io/asyncpg/current/)
 - [polars](https://pola.rs)
 - [pandas](https://pandas.pydata.org/)
 
