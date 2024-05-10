@@ -54,40 +54,51 @@ engine = sa.create_engine('postgresql+pyscopg2://scott:tiger@hostname/dbname')
 
 # Copy CSV directly to database table
 with open('data.csv', 'r') as csv_f:
-    ci.copy_csv(csv_f, 'table_name', 'table_name_temp', engine, schema='test')
+    with engine.connect() as connection:
+        ci.copy_csv(csv_f, 'table_name', 'table_name_temp', connection, schema='test')
+        connection.commit()
 
 # Create temp table based of database table columns (names and types, no constraints)
 meta = sa.MetaData()
 meta.reflect(engine)
 table = sa.Table('table_name', meta)
-temp_table = ci.create_temp_table_from_table(table, 'table_name_temp', meta)
+temp_table = ci.temp.create_temp_table_from_table(table, 'table_name_temp', meta)
 
 # Copy CSV to temp table then insert records from temp table to target table
 with open('data.csv', 'r') as csv_f:
-    ci.copyinsert_csv(csv_file, 'table_name_temp', 'table_name_temp', engine)
-
+    with engine.connect() as connection:
+        ci.copyinsert_csv(csv_file, 'table_name_temp', 'table_name_temp', connection)
+        connection.commit()
+        
 # "ON CONFLICT DO NOTHING" and "ON CONFLICT DO UPDATE" insert options
 on_conflict_do_nothing = ci.insert.insert_from_table_stmt_ocdn
 on_conflict_do_update = ci.insert.insert_from_table_stmt_ocdu
 
-with open('data.csv', 'r') as csv_f:
-    ci.copyinsert_csv(csv_file, 'table_name_temp', 'table_name_temp', engine,
-                      insert_function=on_conflict_do_nothing, constraint='id')
+with open('data.csv', 'r') as csv_f, :
+    with engine.connect() as connection:
+        ci.copyinsert_csv(csv_file, 'table_name_temp', 'table_name_temp', connection,
+                          insert_function=on_conflict_do_nothing, constraint='id')
+        connection.commit()
 
 with open('data.csv', 'r') as csv_f:
-    ci.copyinsert_csv(csv_file, 'table_name_temp', 'table_name_temp', engine,
-                      insert_function=on_conflict_do_update, constraint='id')
+    with engine.connect() as connection:
+        ci.copyinsert_csv(csv_file, 'table_name_temp', 'table_name_temp', connection,
+                          insert_function=on_conflict_do_update, constraint='id')
 
 # 3X faster inserts for Pandas DataFrames
 import pandas as pd
 
 df = pd.DataFrame({'x': range(1_000_000), 'y': range(1_000_000)})
-ci.copyinsert_dataframe(df, 'xy_table', 'xy_table_temp', engine)
+with engine.connect() as connection:
+    ci.copyinsert_dataframe(df, 'xy_table', 'xy_table_temp', connection)
+    connection.commit()
 
 # Polars DataFrame upserts
 import polars as pl
 
 df = pl.DataFrame({'x': range(1_000_000), 'y': range(1_000_000)})
-ci.copyinsert_polars(df, 'xy_table', 'xy_table_temp', engine,
-                     insert_function=on_conflict_do_update, constraint='id')
+with engine.connect() as connection:
+    ci.copyinsert_polars(df, 'xy_table', 'xy_table_temp', connection,
+                         insert_function=on_conflict_do_update, constraint='id')
+    connection.commit()
 ```
