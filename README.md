@@ -67,14 +67,16 @@ with open('data.csv', 'r') as csv_f:
     ci.copyinsert_csv(csv_file, 'table_name_temp', 'table_name_temp', engine)
 
 # "ON CONFLICT DO NOTHING" and "ON CONFLICT DO UPDATE" insert options
-on_conflict_do_nothing = ci.insert_from_table_stmt_ocdn
-on_conflict_do_update = ci.insert_from_table_stmt_ocdu
+on_conflict_do_nothing = ci.insert.insert_from_table_stmt_ocdn
+on_conflict_do_update = ci.insert.insert_from_table_stmt_ocdu
 
 with open('data.csv', 'r') as csv_f:
-    ci.copyinsert_csv(csv_file, 'table_name_temp', 'table_name_temp', engine, insert_function=on_conflict_do_nothing)
+    ci.copyinsert_csv(csv_file, 'table_name_temp', 'table_name_temp', engine,
+                      insert_function=on_conflict_do_nothing, constraint='id')
 
 with open('data.csv', 'r') as csv_f:
-    ci.copyinsert_csv(csv_file, 'table_name_temp', 'table_name_temp', engine, insert_function=on_conflict_do_update)
+    ci.copyinsert_csv(csv_file, 'table_name_temp', 'table_name_temp', engine,
+                      insert_function=on_conflict_do_update, constraint='id')
 
 # 3X faster inserts for Pandas DataFrames
 import pandas as pd
@@ -86,5 +88,6 @@ ci.copyinsert_dataframe(df, 'xy_table', 'xy_table_temp', engine)
 import polars as pl
 
 df = pl.DataFrame({'x': range(1_000_000), 'y': range(1_000_000)})
-ci.copyinsert_polars(df, 'xy_table', 'xy_table_temp', engine, insert_function=on_conflict_do_update)
+ci.copyinsert_polars(df, 'xy_table', 'xy_table_temp', engine,
+                     insert_function=on_conflict_do_update, constraint='id')
 ```
