@@ -17,5 +17,5 @@ async def copy_from_csv(
     await async_connection.copy_to_table(
             table_name, source=csv_file, delimiter=sep,
             header=headers, null=null, columns=columns,
-            schema_name=schema
+            schema_name=schema, format='csv'
         )
