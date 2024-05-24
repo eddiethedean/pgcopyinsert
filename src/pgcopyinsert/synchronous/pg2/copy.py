@@ -1,12 +1,15 @@
 import typing as _t
+import io as _io
 
-#from psycopg2.cursor import Cursor
-from pgcopyinsert.names import adapt_names
+import psycopg2._psycopg as _psycopg
+import sqlalchemy as _sa
+import pgcopyinsert.names as _names
+import pgcopyinsert.synchronous.pg2.connection as _connection
 
 
 def copy_from_csv(
-    cursor: 'psycopg2.Cursor',
-    csv_file,
+    connection: _sa.connection,
+    csv_file: _io.BytesIO,
     table_name: str,
     sep: str = ',',
     null: str = '',
@@ -14,5 +17,8 @@ def copy_from_csv(
     headers: bool = True,
     schema: _t.Optional[str] = None
 ) -> None:
-    table_name, column_names = adapt_names(csv_file, table_name, sep, columns, headers, schema)
-    cursor.copy_from(csv_file, table_name, sep=sep, null=null, columns=column_names)
+    table_name, column_names = _names.adapt_names(csv_file, table_name, sep, columns, headers, schema)
+    pg2_connection: _psycopg.connection = _connection.get_driver_connection(connection)
+    cursor: _psycopg.cursor = pg2_connection.cursor()
+    with _io.TextIOWrapper(csv_file, encoding='utf-8') as text_file:
+        cursor.copy_from(text_file, table_name, sep=sep, null=null, columns=column_names)

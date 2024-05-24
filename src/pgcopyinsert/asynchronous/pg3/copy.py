@@ -2,22 +2,18 @@ import typing as _t
 import io as _io
 import csv as _csv
 
+import sqlalchemy.ext.asyncio as _sa_asyncio
 import psycopg as _psycopg
 import psycopg.sql as _sql
 
 import pgcopyinsert.names as _names
-
-
-def create_copy_query(table_name, fields) -> _sql.Composed:
-    return _sql.SQL("COPY {table} ({fields}) FROM STDOUT").format(
-        fields=_sql.SQL(',').join([_sql.Identifier(col) for col in fields]),
-        table=_sql.Identifier(table_name)
-    )
+import pgcopyinsert.query as _query
+import pgcopyinsert.asynchronous.pg3.connection as _connection
 
 
 async def copy_from_csv(
-    async_connection: _psycopg.AsyncConnection,
-    csv_file: _io.TextIOWrapper,
+    async_connection: _sa_asyncio.AsyncConnection,
+    csv_file: _io.BytesIO,
     table_name: str,
     sep: str = ',',
     null: str = '',
@@ -26,10 +22,12 @@ async def copy_from_csv(
     schema:_t.Optional[str] = None
 ) -> None:
     table_name, column_names = _names.adapt_names(csv_file, table_name, sep, columns, headers, schema)
-    query: _sql.Composed = create_copy_query(table_name, column_names)
-
-    async with async_connection.cursor() as async_cursor:
+    query: _sql.Composed = _query.create_copy_query(table_name, column_names)
+    pg3_async_connection: _psycopg.AsyncConnection
+    pg3_async_connection = await _connection.get_driver_connection(async_connection)
+    async with pg3_async_connection.cursor() as async_cursor:
         async with async_cursor.copy(query) as copy:
-            for row in _csv.reader(csv_file):
-                values: list[str | None] = [None if val == null else val for val in row]
-                await copy.write_row(values)
+            with _io.TextIOWrapper(csv_file, encoding='utf-8') as text_file:
+                for row in _csv.reader(text_file):
+                    values: list[str | None] = [None if val == null else val for val in row]
+                    await copy.write_row(values)

@@ -9,7 +9,7 @@ import pgcopyinsert.synchronous.copy as _copy
 
 
 def copyinsert_csv(
-    csv_file: _io.BytesIO | _io.StringIO,
+    csv_file: _io.BytesIO,
     table_name: str,
     temp_name: str,
     connection: _sa.engine.base.Connection,

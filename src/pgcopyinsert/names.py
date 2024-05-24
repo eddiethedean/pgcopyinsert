@@ -8,11 +8,14 @@ def adapt_names(
     columns: _t.Optional[list[str]],
     headers: bool,
     schema: _t.Optional[str]
-) -> tuple[str, list[str]]:
+) -> tuple[str, list[str] | None]:
     column_names: list[str] | None
     if headers:
         first_line: str = csv_file.readline().strip()
-        column_names = first_line.split(sep) if columns is None else columns
+        if columns is None:
+            column_names = first_line.split(sep)
+        else:
+            column_names = columns
     else:
         column_names = columns
     if schema:

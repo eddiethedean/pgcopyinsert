@@ -1,12 +1,12 @@
 import typing as _t
+import io as _io
 
 import pandas as _pd
 import sqlalchemy.ext.asyncio as _sa_asyncio
 
 import pgcopyinsert.insert as _insert
 import pgcopyinsert.asynchronous.copyinsert as _copyinsert
-import pgcopyinsert.asynchronous.drivers as _async_drivers
-import pgcopyinsert.drivers as _drivers
+import pgcopyinsert.write as _write
 
 
 async def copyinsert_dataframe(
@@ -16,14 +16,11 @@ async def copyinsert_dataframe(
     async_connection: _sa_asyncio.AsyncConnection,
     index: bool = False,
     sep: str = ',',
-    encoding: str = 'utf8',
     schema: _t.Optional[str] = None,
     insert_function: _insert.InsertFunction = _insert.insert_from_table_stmt_ocdn
 ) -> None:
-    driver: str = _drivers.connection_driver_name(async_connection)
-    DriverIO = _async_drivers.get_driver_io(driver)
-    with DriverIO() as csv_file:
-        df.to_csv(csv_file, sep=sep, header=False, encoding=encoding, index=index)
+    with _io.BytesIO() as csv_file:
+        _write.write_df_bytes_csv(df, csv_file, index, include_headers=True)
         csv_file.seek(0)
         column_names = list(df.columns)
         await _copyinsert.copyinsert_csv(

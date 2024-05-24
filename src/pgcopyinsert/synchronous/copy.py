@@ -4,12 +4,11 @@ import io as _io
 import sqlalchemy as _sa
 
 import pgcopyinsert.drivers as _drivers
-import pgcopyinsert.synchronous.drivers as _sync_drivers
 
 
 def copy_from_csv(
     connection: _sa.engine.base.Connection,
-    csv_file: _io.BytesIO | _io.StringIO,
+    csv_file: _io.BytesIO,
     table_name: str,
     sep: str = ',',
     null: str = '',
@@ -18,12 +17,14 @@ def copy_from_csv(
     schema: _t.Optional[str] = None
 ) -> None:
     driver: str = _drivers.connection_driver_name(connection)
-    copy_function = _sync_drivers.driver_copy_from_csv(driver)
-    driver_connection = _sync_drivers.get_driver_connection(connection)
-    copy_function(
-        driver_connection,
-        csv_file, table_name,
-        sep=sep, null=null,
-        columns=columns, headers=headers,
-        schema=schema
-    )
+
+    if driver == 'psycopg':
+        import pgcopyinsert.synchronous.pg3.copy as _pg3_copy
+        _pg3_copy.copy_from_csv(connection, csv_file, table_name, sep, null, columns, headers, schema)
+    elif driver == 'pscopg2':
+        import pgcopyinsert.synchronous.pg2.copy as _pg2_copy
+        _pg2_copy.copy_from_csv(connection, csv_file, table_name, sep, null, columns, headers, schema)
+    else:
+        raise ValueError('driver must be psycopg or pscopg2')
+    
+    
