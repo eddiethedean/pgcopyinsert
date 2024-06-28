@@ -16,6 +16,20 @@ def copy_from_csv(
     headers: bool = True,
     schema: _t.Optional[str] = None
 ) -> None:
+    """
+    Copy CSV file to PostgreSQL table.
+
+    Example
+    -------
+    import sqlalchemy as sa
+    from pgcopyinsert.synchronous.copy import copy_from_csv
+
+    engine = sa.create_engine('postgresql+psycopg://user:password@host:port/dbname')
+    with engine.connect() as connection:
+        with open('people.csv', 'br') as csv_file:
+            copy_from_csv(connection, csv_file, 'people')
+        connection.commit()
+    """
     driver: str = _drivers.connection_driver_name(connection)
 
     if driver == 'psycopg':

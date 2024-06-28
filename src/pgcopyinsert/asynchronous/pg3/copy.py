@@ -21,6 +21,22 @@ async def copy_from_csv(
     headers: bool = True,
     schema:_t.Optional[str] = None
 ) -> None:
+    """
+    Copy CSV file to PostgreSQL table.
+
+    Example
+    -------
+    >>> from sqlalchemy.ext.asyncio import create_async_engine
+    >>> from pgcopyinsert.asynchronous.pg3.copy import copy_from_csv
+
+    >>> async_engine = sa.create_async_engine('postgresql+psycopg://user:password@host:port/dbname')
+    >>> async with async_engine.connect() as async_connection:
+    ...     with open('people.csv', 'br') as csv_file:
+    ...         await copy_from_csv(async_connection, csv_file, 'people')
+    ...     await async_connection.commit()
+
+    >>> await async_engine.dispose()
+    """
     table_name, column_names = _names.adapt_names(csv_file, table_name, sep, columns, headers, schema)
     query: _sql.Composed = _query.create_copy_query(table_name, column_names)
     pg3_async_connection: _psycopg.AsyncConnection
