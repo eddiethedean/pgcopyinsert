@@ -4,7 +4,7 @@ import pandas as _pd
 import sqlalchemy as _sa
 
 import pgcopyinsert.insert as _insert
-import pgcopyinsert.synchronous.copyinsert as _copyinsert
+import pgcopyinsert.copyinsert as _copyinsert
 import pgcopyinsert.write as _write
 
 

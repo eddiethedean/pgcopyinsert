@@ -2,10 +2,10 @@ import typing as _t
 
 import sqlalchemy as _sa
 import sqlalchemy.ext.asyncio as _sa_asyncio
+import fullmetalcopy.asynchronous.copy as _copy
 
 import pgcopyinsert.insert as _insert
 import pgcopyinsert.temp as _temp
-import pgcopyinsert.asynchronous.copy as _copy
 
 
 async def copyinsert_csv(

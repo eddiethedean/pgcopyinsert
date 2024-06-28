@@ -4,10 +4,10 @@ import polars as _pl
 import sqlalchemy as _sa
 
 import pgcopyinsert.insert as _insert
-import pgcopyinsert.synchronous.copyinsert as _copyinsert
+import pgcopyinsert.copyinsert as _copyinsert
 
 
-def copyinsert_polars(
+def copyinsert_dataframe(
     df: _pl.DataFrame,
     table_name: str,
     temp_name: str,

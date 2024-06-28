@@ -1,0 +1,11 @@
+sqlalchemy
+
+[testing]
+setuptools
+mypy>=0.910
+flake8>=3.9
+tox>=3.24
+pytest==6.2.5
+pytest-cov==2.12.1
+pytest-asyncio
+testing.postgresql
