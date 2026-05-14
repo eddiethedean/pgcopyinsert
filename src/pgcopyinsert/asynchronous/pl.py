@@ -12,16 +12,26 @@ async def copyinsert_polars(
     table_name: str,
     temp_name: str,
     async_connection: _sa_asyncio.AsyncConnection,
-    sep: str = ',',
+    sep: str = ",",
     schema: str | None = None,
-    insert_function: _insert.InsertFunction = _insert.insert_from_table_stmt_ocdn
+    insert_function: _insert.InsertFunction = _insert.insert_from_table_stmt_ocdn,
+    constraint: str | None = None,
+    null: str = "",
 ) -> None:
     with _io.BytesIO() as csv_file:
-        df.write_csv(csv_file, include_header=False, null_value='', separator=sep)
+        df.write_csv(csv_file, include_header=False, null_value="", separator=sep)
         csv_file.seek(0)
         column_names = list(df.columns)
         await _copyinsert.copyinsert_csv(
-            csv_file, table_name, temp_name, async_connection,
-            sep=sep, headers=False, schema=schema,
-            columns=column_names, insert_function=insert_function
+            csv_file,
+            table_name,
+            temp_name,
+            async_connection,
+            sep=sep,
+            null=null,
+            headers=False,
+            schema=schema,
+            columns=column_names,
+            insert_function=insert_function,
+            constraint=constraint,
         )

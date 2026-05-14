@@ -14,9 +14,11 @@ async def copyinsert_dataframe(
     temp_name: str,
     async_connection: _sa_asyncio.AsyncConnection,
     index: bool = False,
-    sep: str = ',',
+    sep: str = ",",
     schema: str | None = None,
-    insert_function: _insert.InsertFunction = _insert.insert_from_table_stmt_ocdn
+    insert_function: _insert.InsertFunction = _insert.insert_from_table_stmt_ocdn,
+    constraint: str | None = None,
+    null: str = "",
 ) -> None:
     with _io.BytesIO() as csv_file:
         _write.write_df_bytes_csv(df, csv_file, index, include_headers=True)
@@ -28,8 +30,10 @@ async def copyinsert_dataframe(
             temp_name,
             async_connection,
             sep=sep,
+            null=null,
             headers=True,
             schema=schema,
             columns=column_names,
             insert_function=insert_function,
+            constraint=constraint,
         )

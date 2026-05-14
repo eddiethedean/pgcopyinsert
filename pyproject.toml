@@ -23,7 +23,7 @@ classifiers = [
 ]
 dependencies = [
   "sqlalchemy>=2.0",
-  "fullmetalcopy>=0.1.0",
+  "fullmetalcopy>=0.2.0",
 ]
 
 [project.optional-dependencies]

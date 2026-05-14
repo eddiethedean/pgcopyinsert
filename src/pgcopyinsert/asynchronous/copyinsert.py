@@ -1,3 +1,4 @@
+import io as _io
 
 import fullmetalcopy.asynchronous.copycsv as _copy
 import sqlalchemy as _sa
@@ -8,17 +9,17 @@ import pgcopyinsert.temp as _temp
 
 
 async def copyinsert_csv(
-    csv_file,
+    csv_file: _io.BytesIO,
     table_name: str,
     temp_name: str,
     async_connection: _sa_asyncio.AsyncConnection,
-    sep=',',
-    null='',
+    sep=",",
+    null="",
     columns=None,
     headers=True,
     schema=None,
     insert_function: _insert.InsertFunction = _insert.insert_from_table_stmt_ocdn,
-    constraint: str | None = None
+    constraint: str | None = None,
 ) -> None:
     meta = _sa.MetaData()
     await async_connection.run_sync(meta.reflect, schema=schema)

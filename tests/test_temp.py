@@ -26,6 +26,28 @@ def test_create_temp_table_from_table(test_tables: tuple[sa.Table, sa.Table]) ->
     assert "TEMPORARY" in ddl.upper()
 
 
+def test_create_temp_table_from_table_respects_column_subset() -> None:
+    meta = sa.MetaData()
+    base = sa.Table(
+        "base",
+        meta,
+        sa.Column("id", sa.Integer),
+        sa.Column("email", sa.String(50)),
+        sa.Column("note", sa.String(5)),
+    )
+    other = sa.MetaData()
+    temp = create_temp_table_from_table(base, "tmp", other, columns=["id", "email"])
+    assert list(temp.c.keys()) == ["id", "email"]
+
+
+def test_create_temp_table_from_table_empty_columns_list_raises() -> None:
+    meta = sa.MetaData()
+    base = sa.Table("base", meta, sa.Column("id", sa.Integer))
+    other = sa.MetaData()
+    with pytest.raises(ValueError, match="columns="):
+        create_temp_table_from_table(base, "tmp", other, columns=[])
+
+
 def test_create_table_stmt(test_tables: tuple[sa.Table, sa.Table]) -> None:
     test_table, _ = test_tables
     metadata = sa.MetaData()

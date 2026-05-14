@@ -55,3 +55,48 @@ def test_insert_from_table_stmt_ocdu_compiles() -> None:
     sql = str(stmt.compile(dialect=postgresql.dialect()))
     assert "ON CONFLICT" in sql.upper()
     assert "UPDATE" in sql.upper()
+
+
+def test_insert_from_table_stmt_compiles_from_select() -> None:
+    meta = sa.MetaData()
+    src = sa.Table(
+        "src",
+        meta,
+        sa.Column("id", sa.Integer),
+        sa.Column("name", sa.String(10)),
+    )
+    dst = sa.Table(
+        "dst",
+        meta,
+        sa.Column("id", sa.Integer),
+        sa.Column("name", sa.String(10)),
+    )
+    stmt = insert_from_table_stmt(src, dst)
+    sql = str(stmt.compile(dialect=postgresql.dialect()))
+    assert "INSERT INTO dst" in sql
+    assert "SELECT" in sql.upper()
+    assert "src" in sql.lower()
+
+
+def test_insert_from_table_stmt_ocdn_compiles_with_constraint() -> None:
+    meta = sa.MetaData()
+    t1 = sa.Table("t1", meta, sa.Column("id", sa.Integer))
+    t2 = sa.Table(
+        "t2",
+        meta,
+        sa.Column("id", sa.Integer),
+        sa.UniqueConstraint("id", name="t2_id_uq"),
+    )
+    stmt = insert_from_table_stmt_ocdn(t1, t2, constraint="t2_id_uq")
+    sql = str(stmt.compile(dialect=postgresql.dialect()))
+    assert "ON CONFLICT" in sql.upper()
+    assert "NOTHING" in sql.upper()
+
+
+def test_insert_from_table_stmt_ocdn_compiles_without_constraint() -> None:
+    meta = sa.MetaData()
+    t1 = sa.Table("t1", meta, sa.Column("id", sa.Integer))
+    t2 = sa.Table("t2", meta, sa.Column("id", sa.Integer))
+    stmt = insert_from_table_stmt_ocdn(t1, t2, constraint=None)
+    sql = str(stmt.compile(dialect=postgresql.dialect()))
+    assert "ON CONFLICT" in sql.upper()

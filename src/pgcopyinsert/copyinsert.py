@@ -12,13 +12,13 @@ def copyinsert_csv(
     table_name: str,
     temp_name: str,
     connection: _sa.engine.base.Connection,
-    sep=',',
-    null='',
+    sep=",",
+    null="",
     columns=None,
     headers=True,
     schema=None,
     insert_function: _insert.InsertFunction = _insert.insert_from_table_stmt_ocdn,
-    constraint: str | None = None
+    constraint: str | None = None,
 ) -> None:
     meta = _sa.MetaData()
     meta.reflect(connection, schema=schema)
