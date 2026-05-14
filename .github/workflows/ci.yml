@@ -31,3 +31,6 @@ jobs:
 
       - name: Mypy
         run: mypy src/pgcopyinsert
+
+      - name: Pytest
+        run: pytest -q

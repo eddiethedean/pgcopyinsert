@@ -2,7 +2,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/pgcopyinsert)](https://pypi.org/project/pgcopyinsert/)
 [![Python versions](https://img.shields.io/pypi/pyversions/pgcopyinsert)](https://pypi.org/project/pgcopyinsert/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/eddiethedean/pgcopyinsert/blob/main/LICENSE)
 
 **Fast PostgreSQL bulk loads** using a temp table: **`COPY`** into `TEMPORARY …`, then **`INSERT … SELECT`** (optionally **`ON CONFLICT DO NOTHING`** / **`DO UPDATE`**). Built on **SQLAlchemy 2** and **[fullmetalcopy](https://pypi.org/project/fullmetalcopy/)** (sync + async `COPY`).
 
@@ -24,6 +24,7 @@
   - [Polars](#polars-sync)
   - [Async](#async)
 - [Development](#development)
+- [Releasing](#releasing)
 - [Links](#links)
 
 ---
@@ -313,11 +314,33 @@ mypy src/pgcopyinsert
 pytest
 ```
 
+## Releasing
+
+1. Confirm **CI** is green on `main` and **`python -m build`** succeeds locally.
+2. Ensure **`pyproject.toml`** `version` and **`CHANGELOG.md`** match the tag you are about to cut.
+3. Create a signed or annotated tag (example for **0.3.0**):
+
+   ```sh
+   git tag -a v0.3.0 -m "Release 0.3.0"
+   git push origin v0.3.0
+   ```
+
+4. Build artifacts and upload to PyPI (using [Twine](https://twine.readthedocs.io/)):
+
+   ```sh
+   python -m build
+   twine check dist/*
+   twine upload dist/*
+   ```
+
+See [CHANGELOG.md](https://github.com/eddiethedean/pgcopyinsert/blob/main/CHANGELOG.md) for release notes.
+
 ---
 
 ## Links
 
 - **Repository:** [github.com/eddiethedean/pgcopyinsert](https://github.com/eddiethedean/pgcopyinsert)
+- **Changelog:** [CHANGELOG.md](https://github.com/eddiethedean/pgcopyinsert/blob/main/CHANGELOG.md)
 - **PyPI:** [pypi.org/project/pgcopyinsert](https://pypi.org/project/pgcopyinsert/)
 
-License: **MIT** (see [LICENSE](LICENSE)).
+License: **MIT** (see [LICENSE](https://github.com/eddiethedean/pgcopyinsert/blob/main/LICENSE)).
