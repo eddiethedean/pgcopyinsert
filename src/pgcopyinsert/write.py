@@ -1,8 +1,8 @@
 import io as _io
 
+import pandas as pd
 import pyarrow as _pa
 import pyarrow.csv as _pa_csv
-import pandas as pd
 
 
 def write_df_bytes_csv(

@@ -3,8 +3,8 @@ import io as _io
 import polars as _pl
 import sqlalchemy as _sa
 
-import pgcopyinsert.insert as _insert
 import pgcopyinsert.copyinsert as _copyinsert
+import pgcopyinsert.insert as _insert
 
 
 def copyinsert_dataframe(

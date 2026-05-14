@@ -1,9 +1,0 @@
-sqlalchemy[asyncio]
-fullmetalcopy
-psycopg2-binary
-pandas
-polars
-asyncpg
-aiofiles
-aiocsv
-pyarrow

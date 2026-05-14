@@ -3,8 +3,8 @@ import io as _io
 import pandas as _pd
 import sqlalchemy as _sa
 
-import pgcopyinsert.insert as _insert
 import pgcopyinsert.copyinsert as _copyinsert
+import pgcopyinsert.insert as _insert
 import pgcopyinsert.write as _write
 
 

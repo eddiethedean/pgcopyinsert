@@ -1,8 +1,7 @@
-import typing as _t
 import io as _io
 
+import fullmetalcopy.synchronous.copycsv as _copy
 import sqlalchemy as _sa
-import fullmetalcopy.synchronous.copy as _copy
 
 import pgcopyinsert.insert as _insert
 import pgcopyinsert.temp as _temp
@@ -19,13 +18,15 @@ def copyinsert_csv(
     headers=True,
     schema=None,
     insert_function: _insert.InsertFunction = _insert.insert_from_table_stmt_ocdn,
-    constraint: _t.Optional[str] = None
+    constraint: str | None = None
 ) -> None:
     meta = _sa.MetaData()
     meta.reflect(connection, schema=schema)
     target_table = _sa.Table(table_name, meta, schema=schema)
     # create temp table sqlalchemy object
-    temp_table: _sa.Table = _temp.create_temp_table_from_table(target_table, temp_name, meta, columns=columns)
+    temp_table: _sa.Table = _temp.create_temp_table_from_table(
+        target_table, temp_name, meta, columns=columns
+    )
 
     # Create temp table
     create_stmt: _sa.sql.ddl.CreateTable = _temp.create_table_stmt(temp_table)
@@ -33,9 +34,14 @@ def copyinsert_csv(
 
     # Copy csv to temp table
     _copy.copy_from_csv(
-        connection, csv_file, temp_name,
-        sep=sep, null=null, columns=columns,
-        headers=headers
+        connection,
+        csv_file,
+        temp_name,
+        sep=sep,
+        null=null,
+        columns=columns,
+        headers=headers,
+        schema=schema,
     )
 
     # Insert all records from temp table to target table

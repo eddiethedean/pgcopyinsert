@@ -1,4 +1,3 @@
-import typing as _t
 
 import sqlalchemy as _sa
 
@@ -7,7 +6,7 @@ def create_temp_table_from_table(
     table: _sa.Table,
     name: str,
     meta: _sa.MetaData,
-    columns: _t.Optional[list[str]] = None
+    columns: list[str] | None = None
 ) -> _sa.Table:
     column_names: list[str] = [] if columns is None else columns
     temp_table = _sa.Table(name, meta, prefixes=['TEMPORARY'])

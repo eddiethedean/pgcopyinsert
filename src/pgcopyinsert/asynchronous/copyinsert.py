@@ -1,8 +1,7 @@
-import typing as _t
 
+import fullmetalcopy.asynchronous.copycsv as _copy
 import sqlalchemy as _sa
 import sqlalchemy.ext.asyncio as _sa_asyncio
-import fullmetalcopy.asynchronous.copy as _copy
 
 import pgcopyinsert.insert as _insert
 import pgcopyinsert.temp as _temp
@@ -19,22 +18,29 @@ async def copyinsert_csv(
     headers=True,
     schema=None,
     insert_function: _insert.InsertFunction = _insert.insert_from_table_stmt_ocdn,
-    constraint: _t.Optional[str] = None
+    constraint: str | None = None
 ) -> None:
     meta = _sa.MetaData()
     await async_connection.run_sync(meta.reflect, schema=schema)
     target_table = _sa.Table(table_name, meta, schema=schema)
     # create temp table sqlalchemy object
-    temp_table: _sa.Table = _temp.create_temp_table_from_table(target_table, temp_name, meta, columns=columns)
+    temp_table: _sa.Table = _temp.create_temp_table_from_table(
+        target_table, temp_name, meta, columns=columns
+    )
     # Create temp table
     create_stmt: _sa.sql.ddl.CreateTable = _temp.create_table_stmt(temp_table)
     await async_connection.execute(create_stmt)
 
     # Copy csv to temp table
     await _copy.copy_from_csv(
-        async_connection, csv_file, temp_table.name,
-        sep=sep, null=null, columns=columns,
-        headers=headers, schema=None
+        async_connection,
+        csv_file,
+        temp_table.name,
+        sep=sep,
+        null=null,
+        columns=columns,
+        headers=headers,
+        schema=schema,
     )
 
     # Insert all records from temp table to target table

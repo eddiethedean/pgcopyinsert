@@ -1,11 +1,10 @@
-import typing as _t
 import io as _io
 
 import pandas as _pd
 import sqlalchemy.ext.asyncio as _sa_asyncio
 
-import pgcopyinsert.insert as _insert
 import pgcopyinsert.asynchronous.copyinsert as _copyinsert
+import pgcopyinsert.insert as _insert
 import pgcopyinsert.write as _write
 
 
@@ -16,7 +15,7 @@ async def copyinsert_dataframe(
     async_connection: _sa_asyncio.AsyncConnection,
     index: bool = False,
     sep: str = ',',
-    schema: _t.Optional[str] = None,
+    schema: str | None = None,
     insert_function: _insert.InsertFunction = _insert.insert_from_table_stmt_ocdn
 ) -> None:
     with _io.BytesIO() as csv_file:
@@ -24,7 +23,13 @@ async def copyinsert_dataframe(
         csv_file.seek(0)
         column_names = list(df.columns)
         await _copyinsert.copyinsert_csv(
-            csv_file, table_name, temp_name, async_connection,
-            sep=sep, headers=False, schema=schema,
-            columns=column_names, insert_function=insert_function
+            csv_file,
+            table_name,
+            temp_name,
+            async_connection,
+            sep=sep,
+            headers=True,
+            schema=schema,
+            columns=column_names,
+            insert_function=insert_function,
         )
