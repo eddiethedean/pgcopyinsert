@@ -1,15 +1,63 @@
-# pgcopyinsert: faster PostgreSQL bulk inserts
+# pgcopyinsert
 
-## What is it?
+[![PyPI version](https://img.shields.io/pypi/v/pgcopyinsert)](https://pypi.org/project/pgcopyinsert/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pgcopyinsert)](https://pypi.org/project/pgcopyinsert/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**pgcopyinsert** is a small Python library for faster PostgreSQL bulk loads: stream CSV (or Pandas/Polars) into a **temporary table** (same column names and types as the target, no constraints), then **`INSERT … SELECT`** into the real table, with optional **`ON CONFLICT DO NOTHING`** or **`DO UPDATE`**.
+**Fast PostgreSQL bulk loads** using a temp table: **`COPY`** into `TEMPORARY …`, then **`INSERT … SELECT`** (optionally **`ON CONFLICT DO NOTHING`** / **`DO UPDATE`**). Built on **SQLAlchemy 2** and **[fullmetalcopy](https://pypi.org/project/fullmetalcopy/)** (sync + async `COPY`).
 
-## Features
+---
 
-- **COPY** into a temp table, then insert into the target table (or upsert).
-- **Synchronous** and **asynchronous** flows (via SQLAlchemy + [fullmetalcopy](https://pypi.org/project/fullmetalcopy/)).
-- Helpers for **Pandas** and **Polars** DataFrames.
-- Works with **psycopg** or **psycopg2** (sync) and **psycopg** or **asyncpg** (async), through SQLAlchemy URLs.
+## Contents
+
+- [Why this pattern](#why-this-pattern)
+- [Requirements](#requirements)
+- [Install](#install)
+- [Quick start](#quick-start)
+- [Package layout](#package-layout)
+- [Main APIs](#main-apis)
+- [`ON CONFLICT` and `constraint`](#on-conflict-and-constraint)
+- [Examples](#examples)
+  - [CSV sync](#csv-sync-sqlalchemy-2)
+  - [Single transaction](#single-transaction-with-enginebegin)
+  - [Pandas](#pandas)
+  - [Polars](#polars-sync)
+  - [Async](#async)
+- [Development](#development)
+- [Links](#links)
+
+---
+
+## Why this pattern
+
+1. **Reflect** the target table so column names and types match PostgreSQL.
+2. **Create** a `TEMPORARY` table with the same columns (no constraints).
+3. **`COPY`** CSV bytes into the temp table (fast path).
+4. **`INSERT … SELECT`** into the real table (your chosen insert / upsert builder).
+5. **`DROP`** the temp table.
+
+This keeps `COPY` simple and pushes deduplication / upsert rules into normal SQL `INSERT` logic.
+
+```mermaid
+flowchart LR
+  reflect[Reflect_target]
+  temp[Create_TEMP]
+  copy[COPY_to_temp]
+  ins[INSERT_from_temp]
+  drop[DROP_temp]
+  reflect --> temp --> copy --> ins --> drop
+```
+
+---
+
+## Requirements
+
+- **Python** 3.10+
+- **PostgreSQL** (server your SQLAlchemy engine points at)
+- Runtime deps: **SQLAlchemy ≥ 2.0**, **fullmetalcopy ≥ 0.2.0** (installed with `pip install pgcopyinsert`)
+- A DB driver in your environment (**psycopg**, **psycopg2**, or **asyncpg**) matching your SQLAlchemy URL
+
+---
 
 ## Install
 
@@ -17,9 +65,7 @@
 pip install pgcopyinsert
 ```
 
-Core runtime dependencies are **SQLAlchemy** and **fullmetalcopy** (installed automatically).
-
-Install a PostgreSQL driver and optional dataframe stack:
+**Extras** (drivers + optional stacks):
 
 ```sh
 pip install pgcopyinsert[psycopg2]
@@ -29,25 +75,77 @@ pip install pgcopyinsert[psycopg,pandas]
 pip install pgcopyinsert[asyncpg,polars]
 ```
 
-## Imports and modules
+If `pip` cannot resolve **fullmetalcopy** right after a release, upgrade pip (`pip install -U pip`) and retry.
 
-The package exports **`copy_from_csv`** and **`copyinsert_csv`** from the top level. Submodules hold temp-table helpers, insert statement builders, and dataframe entrypoints:
+---
 
-| Module | Role |
-|--------|------|
-| `pgcopyinsert` | `copy_from_csv`, `copyinsert_csv`, `__version__` |
+## Quick start
+
+```python
+import io
+
+import sqlalchemy as sa
+
+from pgcopyinsert import copyinsert_csv
+
+engine = sa.create_engine("postgresql+psycopg2://user:pass@host/dbname")
+
+with engine.begin() as conn:
+    buf = io.BytesIO(b"id,name\n1,Ada\n")
+    copyinsert_csv(buf, "people", "people_load_tmp", conn, schema="public", headers=True)
+```
+
+`copyinsert_csv` expects a **binary** CSV stream (`io.BytesIO` or file opened with `"rb"`). Use **`engine.begin()`** so temp DDL, copy, insert, and drop stay in **one transaction**.
+
+---
+
+## Package layout
+
+| Import | What you get |
+|--------|----------------|
+| `from pgcopyinsert import copy_from_csv, copyinsert_csv, __version__` | Top-level CSV + copyinsert entrypoints |
 | `pgcopyinsert.temp` | `create_temp_table_from_table`, `create_table_stmt` |
 | `pgcopyinsert.insert` | `insert_from_table_stmt`, `insert_from_table_stmt_ocdn`, `insert_from_table_stmt_ocdu` |
 | `pgcopyinsert.pd` | Pandas `copyinsert_dataframe` |
-| `pgcopyinsert.pl` | Polars `copyinsert_polars` (`copyinsert_dataframe` is deprecated) |
-| `pgcopyinsert.asynchronous.copyinsert` | async `copyinsert_csv` |
-| `pgcopyinsert.asynchronous.pd` / `pl` | async dataframe helpers |
+| `pgcopyinsert.pl` | Polars **`copyinsert_polars`** (`copyinsert_dataframe` is deprecated) |
+| `pgcopyinsert.asynchronous.copyinsert` | `async copyinsert_csv` |
+| `pgcopyinsert.asynchronous.pd` / `pl` | Async Pandas / Polars helpers |
 
-## `ON CONFLICT` and constraint names
+---
 
-For **`on_conflict_do_nothing`** / **`on_conflict_do_update`**, PostgreSQL expects a **named constraint** (e.g. `mytable_pkey`) or you rely on inference when no name is passed. The **`constraint=`** argument is the **constraint name in the database**, not always the same as a column name. Use `\d your_table` in `psql` or inspect `pg_constraint` to get the exact name.
+## Main APIs
 
-## Examples (SQLAlchemy 2, sync)
+### `copyinsert_csv` (sync)
+
+| Parameter | Description |
+|-----------|-------------|
+| `csv_file` | `BytesIO` (or compatible binary buffer), positioned at start of CSV |
+| `table_name` | Existing target table name (reflected) |
+| `temp_name` | Name for the `TEMPORARY` load table |
+| `connection` | SQLAlchemy `Connection` |
+| `sep`, `null`, `columns`, `headers`, `schema` | Forwarded to **fullmetalcopy** `copy_from_csv` for the temp table |
+| `insert_function` | Callable `(temp_table, target_table, constraint) →` executable insert (default: DO NOTHING) |
+| `constraint` | PostgreSQL **constraint name** for `ON CONFLICT`, when required by your insert builder |
+
+### `copy_from_csv` (sync)
+
+Thin re-export from **fullmetalcopy**: load CSV bytes **directly** into a normal table (no temp-table orchestration). See fullmetalcopy docs for parameters.
+
+### DataFrame helpers
+
+**Pandas** (`pgcopyinsert.pd.copyinsert_dataframe`) and **Polars** (`pgcopyinsert.pl.copyinsert_polars`) accept the same idea: optional `constraint`, `null`, `schema`, `sep`, and `insert_function`, and delegate to `copyinsert_csv` / async equivalents.
+
+---
+
+## `ON CONFLICT` and `constraint`
+
+PostgreSQL’s `ON CONFLICT` often targets a **named constraint** (for example `mytable_pkey`). The `constraint=` string must match **`pg_constraint.conname`** (use `\d tablename` in `psql` or query the catalog). It is **not** always the same as a column name.
+
+---
+
+## Examples
+
+### CSV sync (SQLAlchemy 2)
 
 ```python
 import io
@@ -63,7 +161,7 @@ from pgcopyinsert.temp import create_temp_table_from_table
 
 engine = sa.create_engine("postgresql+psycopg2://scott:tiger@hostname/dbname")
 
-# COPY bytes into an existing table (via fullmetalcopy)
+# COPY into an existing table (fullmetalcopy)
 with engine.connect() as conn:
     with open("data.csv", "rb") as f:
         buf = io.BytesIO(f.read())
@@ -71,14 +169,14 @@ with engine.connect() as conn:
     copy_from_csv(conn, buf, "staging_table", schema="public", headers=True)
     conn.commit()
 
-# Reflect a table and build a TEMP table with the same columns (no constraints)
+# Reflect + build a TEMP table with the same columns (no constraints)
 meta = sa.MetaData()
 meta.reflect(engine, schema="public")
 table = sa.Table("target_table", meta, schema="public")
 other_meta = sa.MetaData()
 temp_table = create_temp_table_from_table(table, "target_load_tmp", other_meta)
 
-# copyinsert: temp DDL → COPY → INSERT from temp → DROP temp
+# copyinsert: temp DDL → COPY → INSERT → DROP temp
 with engine.connect() as conn:
     with open("data.csv", "rb") as f:
         buf = io.BytesIO(f.read())
@@ -90,11 +188,11 @@ with engine.connect() as conn:
         conn,
         schema="public",
         insert_function=insert_from_table_stmt_ocdn,
-        constraint="target_table_pkey",  # real constraint name in DB
+        constraint="target_table_pkey",
     )
     conn.commit()
 
-# Upsert (DO UPDATE) — still use the DB constraint name
+# Upsert (DO UPDATE)
 with engine.connect() as conn:
     with open("data.csv", "rb") as f:
         buf = io.BytesIO(f.read())
@@ -111,7 +209,21 @@ with engine.connect() as conn:
     conn.commit()
 ```
 
-Using **`engine.begin()`** is recommended when you want create/copy/insert/drop in a **single transaction**.
+### Single transaction with `engine.begin()`
+
+```python
+import io
+
+import sqlalchemy as sa
+
+from pgcopyinsert import copyinsert_csv
+
+engine = sa.create_engine("postgresql+psycopg2://user:pass@host/db")
+
+with engine.begin() as conn:
+    buf = io.BytesIO(b"id\n42\n")
+    copyinsert_csv(buf, "my_table", "my_table_tmp", conn, headers=True)
+```
 
 ### Pandas
 
@@ -120,10 +232,11 @@ import pandas as pd
 import sqlalchemy as sa
 
 from pgcopyinsert.insert import insert_from_table_stmt_ocdu
-from pgcopyinsert import pd as pci_pd
+import pgcopyinsert.pd as pci_pd
 
-engine = sa.create_engine("postgresql+psycopg2://...")
+engine = sa.create_engine("postgresql+psycopg2://user:pass@host/db")
 df = pd.DataFrame({"x": range(1000), "y": range(1000)})
+
 with engine.connect() as conn:
     pci_pd.copyinsert_dataframe(
         df,
@@ -132,23 +245,25 @@ with engine.connect() as conn:
         conn,
         insert_function=insert_from_table_stmt_ocdu,
         constraint="xy_table_pkey",
+        null="",
     )
     conn.commit()
 ```
 
 ### Polars (sync)
 
-Use **`copyinsert_polars`**. The name **`copyinsert_dataframe`** in this module is deprecated.
+Prefer **`copyinsert_polars`**. **`copyinsert_dataframe`** in this module is deprecated and will emit `DeprecationWarning`.
 
 ```python
 import polars as pl
 import sqlalchemy as sa
 
 from pgcopyinsert.insert import insert_from_table_stmt_ocdu
-from pgcopyinsert import pl as pci_pl
+import pgcopyinsert.pl as pci_pl
 
-engine = sa.create_engine("postgresql+psycopg2://...")
+engine = sa.create_engine("postgresql+psycopg2://user:pass@host/db")
 df = pl.DataFrame({"x": range(1000), "y": range(1000)})
+
 with engine.connect() as conn:
     pci_pl.copyinsert_polars(
         df,
@@ -161,25 +276,48 @@ with engine.connect() as conn:
     conn.commit()
 ```
 
-### Async (sketch)
+### Async
 
 ```python
 import io
 
-import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from pgcopyinsert.asynchronous.copyinsert import copyinsert_csv
 
-async_engine = create_async_engine("postgresql+asyncpg://...")
-async with async_engine.connect() as conn:
-    buf = io.BytesIO(b"id,name\n1,ada\n")
-    await copyinsert_csv(buf, "people", "people_tmp", conn, schema="public")
-    await conn.commit()
+async def load_once(dsn: str) -> None:
+    engine = create_async_engine(dsn)
+    async with engine.connect() as conn:
+        buf = io.BytesIO(b"id,name\n1,Ada\n")
+        await copyinsert_csv(buf, "people", "people_tmp", conn, schema="public", headers=True)
+        await conn.commit()
+    await engine.dispose()
+
+
+# asyncio.run(load_once("postgresql+asyncpg://user:pass@host/db"))
 ```
 
-Use **`pgcopyinsert.asynchronous.pd`** / **`pgcopyinsert.asynchronous.pl`** for async DataFrame loads.
+For **async** DataFrames, use `pgcopyinsert.asynchronous.pd` and `pgcopyinsert.asynchronous.pl`.
 
-## Source
+---
 
-https://github.com/eddiethedean/pgcopyinsert
+## Development
+
+```sh
+git clone https://github.com/eddiethedean/pgcopyinsert.git
+cd pgcopyinsert
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+ruff check src tests && ruff format --check src tests
+mypy src/pgcopyinsert
+pytest
+```
+
+---
+
+## Links
+
+- **Repository:** [github.com/eddiethedean/pgcopyinsert](https://github.com/eddiethedean/pgcopyinsert)
+- **PyPI:** [pypi.org/project/pgcopyinsert](https://pypi.org/project/pgcopyinsert/)
+
+License: **MIT** (see [LICENSE](LICENSE)).
